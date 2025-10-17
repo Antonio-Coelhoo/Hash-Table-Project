@@ -6,27 +6,6 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.util.*;
 
-/**
- * HashTableProject.java
- *
- * Implementa duas abordagens de tabela hash: encadeamento (chaining) e endere\u00e7amento aberto
- * (com sondagem linear, quadr\u00e1tica e duplo-hash). Mede tempo de inser\u00e7\u00e3o e busca,
- * conta colis\u00f5es, produz estat\u00edsticas das maiores listas encadeadas e gaps (espa\u00e7os vazios)
- * no vetor.
- *
- * OBS: Esse c\u00f3digo prioriza clareza e facilidade de extens\u00e3o para o trabalho da disciplina.
- * Gera arquivos CSV com dados brutos para plotagem e um sum\u00e1rio no console.
- *
- * Como usar:
- *  - compilar: javac HashTableProject.java
- *  - executar: java HashTableProject
- *
- * Par\u00e2metros e configura\u00e7\u00f5es s\u00e3o definidos em MAIN_CONFIG abaixo.
- *
- * Aten\u00e7\u00e3o: gerar 10 milhões de registros e rodar todas as combina\u00e7\u00f5es requer muita RAM e tempo.
- * Recomenda-se testar com 100k e 1M localmente; 10M requer m\u00e1quina com grande heap (-Xmx) ou execução em servidor.
- */
-
 class Registro {
     public final String codigo; // 9 dígitos como string (leading zeros allowed)
     public Registro(String codigo) { this.codigo = codigo; }
