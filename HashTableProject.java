@@ -7,13 +7,12 @@ import java.text.DecimalFormat;
 import java.util.*;
 
 class Registro {
-    public final String codigo; // 9 dígitos como string (leading zeros allowed)
+    public final String codigo; 
     public Registro(String codigo) { this.codigo = codigo; }
     @Override public String toString() { return codigo; }
     @Override public int hashCode() { return Integer.parseInt(codigo); }
 }
 
-// --- Hash Function utilities ---
 interface HashFunction {
     int hash(String key, int tableSize);
     String name();
@@ -28,7 +27,6 @@ class HashMod implements HashFunction {
 }
 
 class HashMult implements HashFunction {
-    // Multiplication method (Knuth): floor(m * frac(k*A)) where A ~ (sqrt(5)-1)/2
     private final double A = (Math.sqrt(5)-1)/2.0;
     public int hash(String key, int tableSize){
         int k = Integer.parseInt(key);
@@ -50,7 +48,7 @@ class HashJava implements HashFunction {
 class HashTableChaining {
     private final LinkedList<Registro>[] table;
     private final int size;
-    public long collisions = 0; // count when inserting into an already non-empty bucket
+    public long collisions = 0; 
 
     @SuppressWarnings("unchecked")
     public HashTableChaining(int size){
@@ -62,7 +60,7 @@ class HashTableChaining {
     public void insert(Registro r, HashFunction hf){
         int idx = hf.hash(r.codigo, size);
         LinkedList<Registro> bucket = table[idx];
-        if(!bucket.isEmpty()) collisions++; // count collision when bucket already has at least one element
+        if(!bucket.isEmpty()) collisions++; 
         bucket.add(r);
     }
 
@@ -83,7 +81,6 @@ class HashTableChaining {
         int c=0; for(LinkedList<Registro> b: table) if(!b.isEmpty()) c++; return c;
     }
 
-    // gaps: lengths of consecutive empty slots
     public List<Integer> gaps(){
         List<Integer> g = new ArrayList<>();
         int cur=0;
@@ -95,12 +92,11 @@ class HashTableChaining {
     }
 }
 
-// --- Open Addressing (general) ---
 class HashTableOpenAddressing {
     public enum Probe {LINEAR, QUADRATIC, DOUBLE}
     private final Registro[] table;
     private final int size;
-    public long collisions = 0; // number of probes (excluding the successful probe?) We'll count probes - 1 as collisions
+    public long collisions = 0; 
 
     public HashTableOpenAddressing(int size){ this.size=size; table = new Registro[size]; }
 
@@ -113,7 +109,6 @@ class HashTableOpenAddressing {
         }
     }
 
-    // insert returns number of probes used (for counting collisions)
     public int insert(Registro r, HashFunction hf1, HashFunction hf2, Probe p){
         int h1 = hf1.hash(r.codigo, size);
         int h2 = hf2==null?0:hf2.hash(r.codigo, size);
@@ -121,11 +116,10 @@ class HashTableOpenAddressing {
             int idx = probeIndex(r.codigo, i, h1, h2, p);
             if(table[idx]==null){
                 table[idx]=r;
-                collisions += i; // i probes before finding empty => i collisions
-                return i+1; // probes used
+                collisions += i;
+                return i+1; 
             }
         }
-        // table full
         return -1;
     }
 
@@ -135,7 +129,7 @@ class HashTableOpenAddressing {
         for(int i=0;i<size;i++){
             int idx = probeIndex(r.codigo, i, h1, h2, p);
             Registro cur = table[idx];
-            if(cur==null) return false; // empty slot -> not present
+            if(cur==null) return false; 
             if(cur.codigo.equals(r.codigo)) return true;
         }
         return false;
@@ -150,41 +144,35 @@ class HashTableOpenAddressing {
     public int occupiedSlots(){int c=0; for(Registro r: table) if(r!=null) c++; return c; }
 
     public List<Integer> clusterLengths(){
-        // cluster = consecutive occupied slots
         List<Integer> clusters = new ArrayList<>(); int cur=0;
         for(Registro r: table){ if(r!=null) cur++; else { if(cur>0) clusters.add(cur); cur=0; } }
         if(cur>0) clusters.add(cur); return clusters;
     }
 }
 
-// --- Main experiment controller ---
+
 public class HashTableProject {
 
-    // ---------- CONFIGURABLE ----------
-    static final int[] TABLE_SIZES = {1000, 10000, 100000}; // must be x10 progression
-    static final int[] DATASET_SIZES = {100_000, 1_000_000}; // remove 10_000_000 by default to avoid OOM; user can edit to add 10_000_000
-    static final long[] SEEDS = {42L, 4242L, 424242L}; // use seeds so each hash function sees same data when required
+    
+    static final int[] TABLE_SIZES = {1000, 10000, 100000}; 
+    static final int[] DATASET_SIZES = {100_000, 1_000_000}; 
+    static final long[] SEEDS = {42L, 4242L, 424242L}; 
     static final String OUTPUT_DIR = "results";
-    // Which hash functions to use:
     static final HashFunction HF_MOD = new HashMod();
     static final HashFunction HF_MULT = new HashMult();
     static final HashFunction HF_JAVA = new HashJava();
-    // For open addressing double-hash we can use two different hash functions (hf1 and hf2)
-    // ----------------------------------
 
-    // Utility: generate dataset of n registros using given seed (returns array of Registro)
     static Registro[] generateDataset(int n, long seed) {
         Registro[] arr = new Registro[n];
         Random rnd = new Random(seed);
         for(int i=0;i<n;i++){
-            int value = rnd.nextInt(1_000_000_000); // up to 9 digits
+            int value = rnd.nextInt(1_000_000_000); 
             String code = String.format("%09d", value);
             arr[i] = new Registro(code);
         }
         return arr;
     }
 
-    // write simple CSV of summary
     static void writeCSV(String path, List<String> lines) throws IOException{
         Files.createDirectories(Paths.get(OUTPUT_DIR));
         try(BufferedWriter w = new BufferedWriter(new FileWriter(path))){
@@ -196,11 +184,9 @@ public class HashTableProject {
         System.out.println("HashTableProject - Iniciando experimento\n");
         Files.createDirectories(Paths.get(OUTPUT_DIR));
 
-        // prepare hash functions lists for experiments
         HashFunction[] hfList = new HashFunction[]{HF_MOD, HF_MULT, HF_JAVA};
         String[] hfNames = new String[]{HF_MOD.name(), HF_MULT.name(), HF_JAVA.name()};
 
-        // CSV header for raw results
         List<String> csvLines = new ArrayList<>();
         csvLines.add("datasetSize,seed,tableSize,structure,hashA,hashB,probeType,insertionTimeMs,insertionCollisions,searchTimeMs,searchFound,occupiedSlots,largestChainOrCluster,smallestGap,largestGap,avgGap");
 
@@ -213,7 +199,6 @@ public class HashTableProject {
                 for(int tableSize: TABLE_SIZES){
                     System.out.println("-> Tabela size="+tableSize);
 
-                    // 1) Chaining with each hash function
                     for(HashFunction hf: hfList){
                         System.gc(); Thread.sleep(50);
                         HashTableChaining ht = new HashTableChaining(tableSize);
@@ -222,7 +207,6 @@ public class HashTableProject {
                         long t1 = System.nanoTime();
                         long insertMs = (t1-t0)/1_000_000;
 
-                        // search all
                         long s0 = System.nanoTime(); int found=0;
                         for(Registro r: data) if(ht.contains(r, hf)) found++;
                         long s1 = System.nanoTime();
@@ -245,10 +229,8 @@ public class HashTableProject {
                                 hf.name(), insertMs, ht.collisions, searchMs, found, largest));
                     }
 
-                    // 2) Open addressing: linear, quadratic, double (hash double uses two functions)
                     for(HashFunction hfPrimary: hfList){
                         for(HashTableOpenAddressing.Probe probe: HashTableOpenAddressing.Probe.values()){
-                            // For DOUBLE probe, choose a secondary hash different from primary (simple choice)
                             HashFunction hfSecondary = (probe==HashTableOpenAddressing.Probe.DOUBLE)?
                                     (hfPrimary==HF_MOD?HF_MULT:HF_MOD) : null;
 
@@ -263,7 +245,6 @@ public class HashTableProject {
                             long t1 = System.nanoTime();
                             long insertMs = (t1-t0)/1_000_000;
 
-                            // search all
                             long s0 = System.nanoTime(); int found=0;
                             for(Registro r: data) if(ht.contains(r, hfPrimary, hfSecondary, probe)) found++;
                             long s1 = System.nanoTime(); long searchMs = (s1-s0)/1_000_000;
@@ -286,14 +267,12 @@ public class HashTableProject {
                         }
                     }
 
-                    // flush intermediate CSV per table size to avoid huge memory usage
                     writeCSV(OUTPUT_DIR + "/results_ds" + ds + "_t" + tableSize + ".csv", csvLines);
                 }
 
             }
         }
 
-        // final write
         writeCSV(OUTPUT_DIR + "/results_summary.csv", csvLines);
         System.out.println("\nExperimento completo. CSVs gerados na pasta '"+OUTPUT_DIR+"'.\n");
         System.out.println("Observações:\n - Para 10.000.000 registros ajuste DATASET_SIZES no topo do arquivo e garanta heap suficiente (ex: -Xmx20g).\n - Use as CSVs para gerar gráficos (Excel, Python/matplotlib, R).\n");
